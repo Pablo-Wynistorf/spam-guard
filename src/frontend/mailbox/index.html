@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mailbox</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col sm:flex-row">
+
+  <!-- Sidebar: Mail list -->
+  <aside class="sm:w-1/3 w-full border-r border-gray-300 bg-white p-4 overflow-y-auto">
+    <h2 class="text-xl font-semibold mb-4">Inbox</h2>
+    <ul id="mailList" class="space-y-2">
+      <!-- Mails are inserted here dynamically -->
+    </ul>
+  </aside>
+
+  <!-- Main content: HTML email preview -->
+  <main class="flex-1 bg-gray-50 p-4 overflow-y-auto">
+    <div id="preview" class="w-full h-[70vh] border border-gray-300 rounded-lg bg-white shadow-inner overflow-auto p-4">
+      <p class="text-gray-500 italic">Select an email to view its content.</p>
+    </div>
+  </main>
+
+  <script>
+    // Mocked email list - replace this with your API call
+    const emails = [
+      {
+        id: "1",
+        subject: "Welcome to MailboxBoy",
+        cloudfrontUrl: "https://d111111abcdef8.cloudfront.net/welcome-email.html"
+      },
+      {
+        id: "2",
+        subject: "Verify your account",
+        cloudfrontUrl: "https://d111111abcdef8.cloudfront.net/verify.html"
+      }
+    ];
+
+    const mailList = document.getElementById("mailList");
+    const preview = document.getElementById("preview");
+
+    // Render email list
+    emails.forEach(email => {
+      const li = document.createElement("li");
+      li.className = "cursor-pointer p-3 rounded hover:bg-blue-50 border border-gray-200";
+      li.textContent = email.subject;
+      li.addEventListener("click", () => loadEmail(email.cloudfrontUrl));
+      mailList.appendChild(li);
+    });
+
+    // Load and display HTML email
+    async function loadEmail(url) {
+      preview.innerHTML = "<p class='text-gray-400 italic'>Loading...</p>";
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("Failed to load email");
+        const html = await res.text();
+        preview.innerHTML = html;
+      } catch (err) {
+        preview.innerHTML = "<p class='text-red-500'>Error loading email content.</p>";
+      }
+    }
+  </script>
+
+</body>
+</html>
