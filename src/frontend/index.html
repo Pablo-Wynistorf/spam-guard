@@ -43,6 +43,7 @@
         const data = await res.json();
         emailField.textContent = data.email || "No email returned";
         result.classList.remove("hidden");
+        window.location.replace("/mailbox");
       } catch (err) {
         emailField.textContent = "Error generating email";
         result.classList.remove("hidden");
