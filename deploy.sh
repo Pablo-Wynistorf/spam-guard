@@ -1,25 +1,57 @@
 #!/bin/bash
 
-# Read .env.json file
-ENV_FILE=".env.json"
+set -e
 
-# Extract JwtSecret value
-JWT_SECRET=$(grep -o '"JwtSecret"\s*:\s*"[^"]*"' "$ENV_FILE" | sed 's/.*: "//;s/"$//')
+# Check dependencies
+for cmd in aws sam npm; do
+  if ! command -v $cmd &> /dev/null; then
+    echo "$cmd is not installed. Please install it first."
+    exit 1
+  fi
+done
 
-# Extract EmailDomains JSON string (keep brackets and quotes)
-EMAIL_DOMAINS=$(grep -o '"EmailDomains"\s*:\s*\[[^]]*\]' "$ENV_FILE" | sed 's/.*: //')
+# Prompt for secrets
+read -s -p "Enter the JWT secret: " JWT_SECRET
+echo
+read -p "Enter the email domain: " EMAIL_DOMAIN
 
-# Sanity checks
-if [ -z "$JWT_SECRET" ] || [ -z "$EMAIL_DOMAINS" ]; then
-  echo "Error: Could not extract required parameters from $ENV_FILE"
+# Validate input
+if [[ -z "$JWT_SECRET" ]]; then
+  echo "JWT secret cannot be empty."
   exit 1
 fi
 
-# Deploy
+if [[ -z "$EMAIL_DOMAIN" ]]; then
+  echo "Email domain cannot be empty."
+  exit 1
+fi
+
+sam build
+
+# Deploy SAM app
 sam deploy \
-  --template-file template.yaml \
+  --template-file template.yml \
   --stack-name spam-guard \
-  --capabilities CAPABILITY_NAMED_IAM \
   --parameter-overrides \
     JwtSecret="$JWT_SECRET" \
-    EmailDomains="$EMAIL_DOMAINS"
+    EmailDomain="$EMAIL_DOMAIN"
+
+# Get AWS info
+AWSAccountId=$(aws sts get-caller-identity --query Account --output text)
+AWSRegion=$(aws configure get region)
+
+# Fallback to default region if empty
+if [[ -z "$AWSRegion" ]]; then
+  AWSRegion="us-east-1"
+  echo "No default AWS region configured. Falling back to $AWSRegion."
+fi
+
+# Define S3 bucket name
+S3_BUCKET="spam-guard-static-assets-${AWSAccountId}-${AWSRegion}"
+
+# Upload frontend assets
+aws s3 cp --recursive ./src/frontend/ "s3://${S3_BUCKET}/"
+
+aws ses set-active-receipt-rule-set --rule-set-name SpamGuardRuleSet
+
+echo "Deployment complete."

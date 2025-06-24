@@ -3,9 +3,14 @@ Transform: AWS::Serverless-2016-10-31
 Description: Deploys spam-guard Lambda functions and static content with CloudFront
 
 Parameters:
-  EmailDomains:
+  EmailDomain:
     Type: String
-    Description: "Comma-separated list of email domains to process"
+    Description: "Email domain to process"
+
+  JwtSecret:
+    Type: String
+    NoEcho: true
+    Description: "Secret used to sign JWTs"
 
 Globals:
   Function:
@@ -15,17 +20,6 @@ Globals:
     Architectures: [arm64]
 
 Resources:
-  JwtSecret:
-    Type: AWS::SecretsManager::Secret
-    Properties:
-      Name: SpamGuardJWTSecret
-      Description: Secret used to sign JWTs
-      GenerateSecretString:
-        SecretStringTemplate: "{}"
-        GenerateStringKey: jwtSecret
-        PasswordLength: 64
-        ExcludePunctuation: true
-
   SpamGuardApi:
     Type: AWS::Serverless::Api
     Properties:
@@ -40,8 +34,8 @@ Resources:
       CodeUri: src/lambdas/create-mailbox/
       Environment:
         Variables:
-          EMAIL_DOMAINS: !Ref EmailDomains
-          JWT_SECRET: !Sub "{{resolve:secretsmanager:${JwtSecret}::jwtSecret}}"
+          EMAIL_DOMAIN: !Ref EmailDomain
+          JWT_SECRET: !Ref JwtSecret
           TABLE_NAME: !Ref emailsTable
       Events:
         Api:
@@ -66,7 +60,7 @@ Resources:
       CodeUri: src/lambdas/fetch-emails/
       Environment:
         Variables:
-          JWT_SECRET: !Sub "{{resolve:secretsmanager:${JwtSecret}::jwtSecret}}"
+          JWT_SECRET: !Ref JwtSecret
           TABLE_NAME: !Ref emailsTable
       Events:
         Api:
@@ -93,6 +87,11 @@ Resources:
         Variables:
           TABLE_NAME: !Ref emailsTable
           EMAIL_STORAGE_BUCKET: !Ref EmailsS3Bucket
+      Events:
+        EmailSnsEvent:
+          Type: SNS
+          Properties:
+            Topic: !Ref SnsTopic
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref emailsTable
@@ -265,19 +264,11 @@ Resources:
     Type: AWS::SNS::Topic
     Properties:
       TopicName: SpamGuardEmailNotification
-  
-  SnsTopicSubscription:
-    Type: AWS::SNS::Subscription
-    Properties:
-      TopicArn: !Ref SnsTopic
-      Protocol: lambda
-      Endpoint: !GetAtt EmailProcessorFunction.Arn
 
   SesRuleSet:
     Type: AWS::SES::ReceiptRuleSet
     Properties:
       RuleSetName: SpamGuardRuleSet
-      Enabled: true
 
   SesReceiptRule:
     Type: AWS::SES::ReceiptRule
@@ -287,14 +278,15 @@ Resources:
         Name: process-email
         Enabled: true
         Recipients:
-          - !Select [0, !Split [",", !Ref EmailDomains]]
+          - !Ref EmailDomain
         Actions:
           - SNSAction:
               TopicArn: !Ref SnsTopic
-              Encoding: UTF-8
+              Encoding: Base64
         ScanEnabled: true
         TlsPolicy: Optional
-
+    DependsOn:
+      - SesRuleSet
 
 Outputs:
   CloudFrontURL:

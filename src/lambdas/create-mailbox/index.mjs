@@ -1,7 +1,7 @@
 import { DynamoDBClient, QueryCommand } from "@aws-sdk/client-dynamodb";
 import jwt from "jsonwebtoken";
 
-const EMAIL_DOMAINS = process.env.EMAIL_DOMAINS.split(',');
+const EMAIL_DOMAIN = process.env.EMAIL_DOMAIN;
 const JWT_SECRET = process.env.JWT_SECRET;
 const TABLE_NAME = process.env.TABLE_NAME;
 
@@ -17,10 +17,10 @@ function generateRandomString() {
 }
 
 export const handler = async (event) => {
-    if (!EMAIL_DOMAINS.length) {
+    if (!EMAIL_DOMAIN.length) {
         return {
             statusCode: 500,
-            body: JSON.stringify({ error: "EMAIL_DOMAINS not configured" }),
+            body: JSON.stringify({ error: "EMAIL_DOMAIN not configured" }),
         };
     }
 
@@ -30,9 +30,8 @@ export const handler = async (event) => {
     let attempts = 0;
 
     while (!isUnique && attempts < maxAttempts) {
-        const randomDomain = EMAIL_DOMAINS[Math.floor(Math.random() * EMAIL_DOMAINS.length)];
         const randomString = generateRandomString();
-        email = `${randomString}@${randomDomain}`;
+        email = `${randomString}@${EMAIL_DOMAIN}`;
 
         try {
             const { Items } = await dynamodb.send(new QueryCommand({
