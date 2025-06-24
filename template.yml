@@ -20,6 +20,14 @@ Globals:
     Architectures: [arm64]
 
 Resources:
+
+  SpamGuardApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      Name: spam-guard-api
+      EndpointConfiguration: REGIONAL
+
   CreateEmailMailboxFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -29,16 +37,17 @@ Resources:
         Variables:
           EMAIL_DOMAINS: !Ref EmailDomains
           JWT_SECRET: !Ref JwtSecret
-          TABLE_NAME: !Ref EmailsTable
+          TABLE_NAME: !Ref emailsTable
       Events:
         Api:
           Type: Api
           Properties:
-            Path: create-mailbox
+            RestApiId: !Ref SpamGuardApi
+            Path: /api/create-mailbox
             Method: post
       Policies:
         - DynamoDBReadPolicy:
-            TableName: !Ref EmailsTable
+            TableName: !Ref emailsTable
     Metadata:
       BuildMethod: nodejs22.x
       BuildProperties:
@@ -53,16 +62,17 @@ Resources:
       Environment:
         Variables:
           JWT_SECRET: !Ref JwtSecret
-          TABLE_NAME: !Ref EmailsTable
+          TABLE_NAME: !Ref emailsTable
       Events:
         Api:
           Type: Api
           Properties:
-            Path: fetch-emails
+            RestApiId: !Ref SpamGuardApi
+            Path: /api/fetch-emails
             Method: get
       Policies:
         - DynamoDBReadPolicy:
-            TableName: !Ref EmailsTable
+            TableName: !Ref emailsTable
     Metadata:
       BuildMethod: nodejs22.x
       BuildProperties:
@@ -76,11 +86,11 @@ Resources:
       CodeUri: src/lambdas/email-processor/
       Environment:
         Variables:
-          TABLE_NAME: !Ref EmailsTable
+          TABLE_NAME: !Ref emailsTable
           EMAIL_STORAGE_BUCKET: !Ref EmailsS3Bucket
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !Ref EmailsTable
+            TableName: !Ref emailsTable
         - S3WritePolicy:
             BucketName: !Ref EmailsS3Bucket
     Metadata:
@@ -101,7 +111,7 @@ Resources:
         Stream:
           Type: DynamoDB
           Properties:
-            Stream: !GetAtt EmailsTable.StreamArn
+            Stream: !GetAtt emailsTable.StreamArn
             StartingPosition: TRIM_HORIZON
       Policies:
         - S3CrudPolicy:
@@ -112,10 +122,10 @@ Resources:
         InstallCommands:
           - npm install
 
-  EmailsTable:
+  emailsTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: EmailsTable
+      TableName: emailsTable
       AttributeDefinitions:
         - AttributeName: emailId
           AttributeType: S
@@ -138,6 +148,8 @@ Resources:
     Type: AWS::S3::Bucket
     Properties:
       BucketName: !Sub "spam-guard-static-assets-${AWS::AccountId}-${AWS::Region}"
+      WebsiteConfiguration:
+        IndexDocument: index.html
 
   SpamGuardStaticAssetsOAC:
     Type: AWS::CloudFront::OriginAccessControl
@@ -157,13 +169,9 @@ Resources:
         Version: "2012-10-17"
         Statement:
           - Effect: Allow
-            Principal:
-              Service: cloudfront.amazonaws.com
+            Principal: "*"
             Action: s3:GetObject
             Resource: !Sub "${StaticAssetsS3Bucket.Arn}/*"
-            Condition:
-              StringEquals:
-                AWS:SourceArn: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}"
 
   EmailsS3BucketPolicy:
     Type: AWS::S3::BucketPolicy
@@ -197,7 +205,8 @@ Resources:
             S3OriginConfig: {}
             OriginAccessControlId: !Ref SpamGuardStaticAssetsOAC
           - Id: ApiOrigin
-            DomainName: !Sub "${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod"
+            DomainName: !Sub "${SpamGuardApi}.execute-api.${AWS::Region}.amazonaws.com"
+            OriginPath: "/Prod"
             CustomOriginConfig:
               OriginProtocolPolicy: https-only
 
@@ -225,8 +234,8 @@ Resources:
             DefaultTTL: 0
             MaxTTL: 0
 
-          - PathPattern: "/mailbox/*"
-            TargetOriginId: StaticS3Origin
+          - PathPattern: "/api/emails/*"
+            TargetOriginId: EmailS3Origin
             ViewerProtocolPolicy: redirect-to-https
             AllowedMethods: [GET, HEAD]
             CachedMethods: [GET, HEAD]
@@ -241,7 +250,7 @@ Resources:
 Outputs:
   ApiUrl:
     Description: API Gateway endpoint
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
+    Value: !Sub "https://${SpamGuardApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
 
   StaticBucketName:
     Description: Name of the S3 bucket for static files
