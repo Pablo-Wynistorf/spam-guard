@@ -34,7 +34,7 @@ Resources:
         Api:
           Type: Api
           Properties:
-            Path: /create-mailbox
+            Path: create-mailbox
             Method: post
       Policies:
       - DynamoDBReadPolicy:
@@ -61,7 +61,7 @@ Resources:
         Api:
           Type: Api
           Properties:
-            Path: /fetch-emails
+            Path: fetch-emails
             Method: get
       Policies:
       - DynamoDBReadPolicy:
@@ -146,26 +146,38 @@ Resources:
     Properties:
       BucketName:
         Fn::Sub: spam-guard-emails-bucket-${AWS::AccountId}-${AWS::Region}
-      VersioningConfiguration:
-        Status: Enabled
   StaticAssetsS3Bucket:
     Type: AWS::S3::Bucket
     Properties:
       BucketName:
         Fn::Sub: spam-guard-static-assets-${AWS::AccountId}-${AWS::Region}
-      CorsConfiguration:
-        CorsRules:
-        - AllowedHeaders:
-          - '*'
-          AllowedMethods:
-          - GET
-          AllowedOrigins:
-          - '*'
-  CloudFrontOAI:
-    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+  SpamGuardStaticAssetsOAC:
+    Type: AWS::CloudFront::OriginAccessControl
     Properties:
-      CloudFrontOriginAccessIdentityConfig:
-        Comment: Access Identity for CloudFront
+      OriginAccessControlConfig:
+        Name: spam-guard-static-assets-oac
+        Description: Access control for CloudFront to S3 static bucket
+        SigningBehavior: always
+        SigningProtocol: sigv4
+        OriginAccessControlOriginType: s3
+  StaticAssetsS3BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket:
+        Ref: StaticAssetsS3Bucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: cloudfront.amazonaws.com
+          Action: s3:GetObject
+          Resource:
+            Fn::Sub: ${StaticAssetsS3Bucket.Arn}/*
+          Condition:
+            StringEquals:
+              AWS:SourceArn:
+                Fn::Sub: arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}
   EmailsS3BucketPolicy:
     Type: AWS::S3::BucketPolicy
     Properties:
@@ -176,29 +188,14 @@ Resources:
         Statement:
         - Effect: Allow
           Principal:
-            CanonicalUser:
-              Fn::GetAtt:
-              - CloudFrontOAI
-              - S3CanonicalUserId
+            Service: cloudfront.amazonaws.com
           Action: s3:GetObject
           Resource:
             Fn::Sub: ${EmailsS3Bucket.Arn}/*
-  StaticAssetsS3BucketPolicy:
-    Type: AWS::S3::BucketPolicy
-    Properties:
-      Bucket:
-        Ref: StaticAssetsS3Bucket
-      PolicyDocument:
-        Statement:
-        - Effect: Allow
-          Principal:
-            CanonicalUser:
-              Fn::GetAtt:
-              - CloudFrontOAI
-              - S3CanonicalUserId
-          Action: s3:GetObject
-          Resource:
-            Fn::Sub: ${StaticAssetsS3Bucket.Arn}/*
+          Condition:
+            StringEquals:
+              AWS:SourceArn:
+                Fn::Sub: arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}
   CloudFrontDistribution:
     Type: AWS::CloudFront::Distribution
     Properties:
@@ -210,10 +207,18 @@ Resources:
           DomainName:
             Fn::GetAtt:
             - StaticAssetsS3Bucket
-            - DomainName
-          S3OriginConfig:
-            OriginAccessIdentity:
-              Fn::Sub: origin-access-identity/cloudfront/${CloudFrontOAI}
+            - RegionalDomainName
+          S3OriginConfig: {}
+          OriginAccessControlId:
+            Ref: SpamGuardStaticAssetsOAC
+        - Id: EmailS3Origin
+          DomainName:
+            Fn::GetAtt:
+            - EmailsS3Bucket
+            - RegionalDomainName
+          S3OriginConfig: {}
+          OriginAccessControlId:
+            Ref: SpamGuardStaticAssetsOAC
         - Id: ApiOrigin
           DomainName:
             Fn::Sub: ${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com

@@ -133,18 +133,11 @@ Resources:
     Type: AWS::S3::Bucket
     Properties:
       BucketName: !Sub "spam-guard-emails-bucket-${AWS::AccountId}-${AWS::Region}"
-      VersioningConfiguration:
-        Status: Enabled
 
   StaticAssetsS3Bucket:
     Type: AWS::S3::Bucket
     Properties:
       BucketName: !Sub "spam-guard-static-assets-${AWS::AccountId}-${AWS::Region}"
-      CorsConfiguration:
-        CorsRules:
-          - AllowedHeaders: ["*"]
-            AllowedMethods: [GET]
-            AllowedOrigins: ["*"]
 
   SpamGuardStaticAssetsOAC:
     Type: AWS::CloudFront::OriginAccessControl
@@ -152,9 +145,9 @@ Resources:
       OriginAccessControlConfig:
         Name: spam-guard-static-assets-oac
         Description: Access control for CloudFront to S3 static bucket
-        OriginType: s3
         SigningBehavior: always
         SigningProtocol: sigv4
+        OriginAccessControlOriginType: s3
 
   StaticAssetsS3BucketPolicy:
     Type: AWS::S3::BucketPolicy
@@ -204,7 +197,7 @@ Resources:
             S3OriginConfig: {}
             OriginAccessControlId: !Ref SpamGuardStaticAssetsOAC
           - Id: ApiOrigin
-            DomainName: !Sub "${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com"
+            DomainName: !Sub "${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod"
             CustomOriginConfig:
               OriginProtocolPolicy: https-only
 

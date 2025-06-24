@@ -37,7 +37,7 @@ export const handler = async (event) => {
         try {
             const { Item } = await dynamodb.send(new GetItemCommand({
                 TableName: TABLE_NAME,
-                Key: { 'recipient': { S: email } }
+                Key: { 'emailId': { S: email } }
             }));
 
             if (!Item) {
