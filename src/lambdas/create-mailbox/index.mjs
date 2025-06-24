@@ -37,7 +37,6 @@ export const handler = async (event) => {
         try {
             const { Items } = await dynamodb.send(new QueryCommand({
                 TableName: TABLE_NAME,
-                IndexName: "EmailIndex",
                 KeyConditionExpression: "email = :email",
                 ExpressionAttributeValues: {
                     ":email": { S: email }
