@@ -37,14 +37,7 @@ function displayEmail() {
 function copyEmail() {
     if (!emailText) return;
     navigator.clipboard.writeText(emailText).then(() => {
-        new Noty({
-            type: 'success',
-            layout: 'bottomRight',
-            theme: 'metroui',
-            timeout: 2000,
-            text: 'Email copied to clipboard',
-            progressBar: true
-        }).show();
+        displayAlertSuccess("Email copied to clipboard");
     });
 }
 
@@ -87,7 +80,7 @@ async function loadEmail(url) {
     preview.innerHTML = "<p class='text-gray-500 italic'>Loading...</p>";
     try {
         const res = await fetch(url);
-        if (!res.ok) throw new Error("Failed to load email");
+        if (!res.ok) throw displayAlertError("Failed to load email content");
         const html = await res.text();
         preview.innerHTML = html;
     } catch (err) {
@@ -117,6 +110,28 @@ function startCountdownLoop() {
         }
         countdownEl.textContent = `Refreshing in ${countdown}s`;
     }, 1000);
+}
+
+function displayAlertError(message) {
+    new Noty({
+        text: message,
+        type: 'error',
+        layout: 'bottomRight',
+        timeout: 5000,
+        theme: 'metroui',
+        progressBar: true
+    }).show();
+}
+
+function displayAlertSuccess(message) {
+    new Noty({
+        text: message,
+        type: 'success',
+        layout: 'bottomRight',
+        timeout: 5000,
+        theme: 'metroui',
+        progressBar: true
+    }).show();
 }
 
 displayEmail();

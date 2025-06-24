@@ -4,7 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Spam Guard</title>
+  <link rel="icon" href="https://cdn.onedns.ch/a/1387184109679411219"/>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/noty/3.1.4/noty.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/noty/3.1.4/noty.min.js"></script>
   <style>
     body {
       animation: fadeIn 0.8s ease-out;
@@ -25,7 +28,7 @@
       <p class="text-gray-400 text-sm">Protect your privacy by generating a disposable email inbox in seconds.</p>
     </div>
 
-    <!-- Generate Button -->
+    <!-- Generate Button & Footer -->
     <div class="flex flex-col gap-4 items-center">
       <button
         id="generateBtn"
@@ -34,15 +37,15 @@
         Generate Temp Email
       </button>
 
-    <!-- Footer countdown or info -->
-    <div class="text-center text-sm text-gray-500">
-      You'll be redirected to your inbox after email creation.
+      <div class="text-center text-sm text-gray-500">
+        You'll be redirected to your inbox after email creation.
+      </div>
     </div>
+
   </div>
 
   <script>
     const button = document.getElementById("generateBtn");
-    const emailField = document.getElementById("email");
 
     button.addEventListener("click", async () => {
       button.disabled = true;
@@ -57,15 +60,26 @@
         if (!res.ok) throw new Error("Failed to fetch email");
 
         const data = await res.json();
-        emailField.textContent = data.email || "No email returned";
         window.location.replace("/mailbox");
       } catch (err) {
-        emailField.textContent = "Error generating email";
+        console.error("Error generating email:", err);
+        displayAlertError("Error generating email, try again later.");
       } finally {
         button.disabled = false;
         button.textContent = "Generate Temp Email";
       }
     });
+
+    function displayAlertError(message) {
+      new Noty({
+        text: message,
+        type: 'error',
+        layout: 'topCenter',
+        timeout: 5000,
+        theme: 'metroui',
+        progressBar: true
+      }).show();
+    }
   </script>
 </body>
 </html>
