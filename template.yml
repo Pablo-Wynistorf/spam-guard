@@ -146,11 +146,31 @@ Resources:
             AllowedMethods: [GET]
             AllowedOrigins: ["*"]
 
-  CloudFrontOAI:
-    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+  SpamGuardStaticAssetsOAC:
+    Type: AWS::CloudFront::OriginAccessControl
     Properties:
-      CloudFrontOriginAccessIdentityConfig:
-        Comment: "Access Identity for CloudFront"
+      OriginAccessControlConfig:
+        Name: spam-guard-static-assets-oac
+        Description: Access control for CloudFront to S3 static bucket
+        OriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  StaticAssetsS3BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref StaticAssetsS3Bucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub "${StaticAssetsS3Bucket.Arn}/*"
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}"
 
   EmailsS3BucketPolicy:
     Type: AWS::S3::BucketPolicy
@@ -161,21 +181,12 @@ Resources:
         Statement:
           - Effect: Allow
             Principal:
-              CanonicalUser: !GetAtt CloudFrontOAI.S3CanonicalUserId
+              Service: cloudfront.amazonaws.com
             Action: s3:GetObject
             Resource: !Sub "${EmailsS3Bucket.Arn}/*"
-
-  StaticAssetsS3BucketPolicy:
-    Type: AWS::S3::BucketPolicy
-    Properties:
-      Bucket: !Ref StaticAssetsS3Bucket
-      PolicyDocument:
-        Statement:
-          - Effect: Allow
-            Principal:
-              CanonicalUser: !GetAtt CloudFrontOAI.S3CanonicalUserId
-            Action: s3:GetObject
-            Resource: !Sub "${StaticAssetsS3Bucket.Arn}/*"
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${CloudFrontDistribution}"
 
   CloudFrontDistribution:
     Type: AWS::CloudFront::Distribution
@@ -185,11 +196,15 @@ Resources:
         DefaultRootObject: index.html
         Origins:
           - Id: StaticS3Origin
-            DomainName: !GetAtt StaticAssetsS3Bucket.DomainName
-            S3OriginConfig:
-              OriginAccessIdentity: !Sub "origin-access-identity/cloudfront/${CloudFrontOAI}"
+            DomainName: !GetAtt StaticAssetsS3Bucket.RegionalDomainName
+            S3OriginConfig: {}
+            OriginAccessControlId: !Ref SpamGuardStaticAssetsOAC
+          - Id: EmailS3Origin
+            DomainName: !GetAtt EmailsS3Bucket.RegionalDomainName
+            S3OriginConfig: {}
+            OriginAccessControlId: !Ref SpamGuardStaticAssetsOAC
           - Id: ApiOrigin
-            DomainName: !Sub "${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod"
+            DomainName: !Sub "${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com"
             CustomOriginConfig:
               OriginProtocolPolicy: https-only
 
