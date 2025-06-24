@@ -48,7 +48,6 @@ export const handler = async (event) => {
         sender:   { S: parsedEmail.from?.text || mail.source || "unknown@sender" },
         s3Key:    { S: key },
         date:     { S: parsedEmail.date?.toISOString() || mail.commonHeaders?.date || new Date().toISOString() },
-        messageId:{ S: messageId },
         ttl:      { N: ttl.toString() }
       }
     }));

@@ -68,7 +68,7 @@ export const handler = async (event) => {
     const token = jwt.sign({ email }, JWT_SECRET, { expiresIn: "20m" });
 
     const headers = {
-        "Set-Cookie": `email_session=${token}; HttpOnly; Max-Age=1200; Path=/; SameSite=Lax`,
+        "Set-Cookie": `email_session=${token}; Max-Age=1200; Path=/; SameSite=Lax`,
         "Content-Type": "application/json",
     };
 
