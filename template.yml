@@ -36,6 +36,9 @@ Resources:
           Properties:
             Path: /create-mailbox
             Method: post
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref EmailsTable
     Metadata:
       BuildMethod: nodejs22.x
       BuildProperties:
@@ -57,6 +60,9 @@ Resources:
           Properties:
             Path: /fetch-emails
             Method: get
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref EmailsTable
     Metadata:
       BuildMethod: nodejs22.x
       BuildProperties:
@@ -72,6 +78,11 @@ Resources:
         Variables:
           TABLE_NAME: !Ref EmailsTable
           EMAIL_STORAGE_BUCKET: !Ref EmailsS3Bucket
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref EmailsTable
+        - S3WritePolicy:
+            BucketName: !Ref EmailsS3Bucket
     Metadata:
       BuildMethod: nodejs22.x
       BuildProperties:
@@ -92,6 +103,9 @@ Resources:
           Properties:
             Stream: !GetAtt EmailsTable.StreamArn
             StartingPosition: TRIM_HORIZON
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref EmailsS3Bucket
     Metadata:
       BuildMethod: nodejs22.x
       BuildProperties:
@@ -109,62 +123,47 @@ Resources:
         - AttributeName: emailId
           KeyType: HASH
       BillingMode: PAY_PER_REQUEST
-    StreamSpecification:
-      StreamViewType: NEW_AND_OLD_IMAGES
-    TimeToLiveSpecification:
-      AttributeName: ttl
-      Enabled: true
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
 
   EmailsS3Bucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Sub "emails-bucket-${AWS::AccountId}-${AWS::Region}"
+      BucketName: !Sub "spam-guard-emails-bucket-${AWS::AccountId}-${AWS::Region}"
       VersioningConfiguration:
         Status: Enabled
 
   StaticAssetsS3Bucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Sub "static-assets-${AWS::AccountId}-${AWS::Region}"
+      BucketName: !Sub "spam-guard-static-assets-${AWS::AccountId}-${AWS::Region}"
       CorsConfiguration:
         CorsRules:
           - AllowedHeaders: ["*"]
             AllowedMethods: [GET]
             AllowedOrigins: ["*"]
 
-  CreateMailboxS3HTMLObject:
-    Type: AWS::S3::BucketObject
-    Properties:
-      Bucket: !Ref StaticAssetsS3Bucket
-      Key: index.html
-      Source: src/frontend/create-mailbox/index.html
-  
-  CreateMailboxS3JSObject:
-    Type: AWS::S3::BucketObject
-    Properties:
-      Bucket: !Ref StaticAssetsS3Bucket
-      Key: index.js
-      Source: src/frontend/create-mailbox/index.js
-
-  MailboxS3HTMLObject:
-    Type: AWS::S3::BucketObject
-    Properties:
-      Bucket: !Ref StaticAssetsS3Bucket
-      Key: mailbox/index.html
-      Source: src/frontend/mailbox/index.html
-  
-  MailboxS3JSObject:
-    Type: AWS::S3::BucketObject
-    Properties:
-      Bucket: !Ref StaticAssetsS3Bucket
-      Key: mailbox/index.js
-      Source: src/frontend/mailbox/index.js
-
   CloudFrontOAI:
     Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
     Properties:
       CloudFrontOriginAccessIdentityConfig:
         Comment: "Access Identity for CloudFront"
+
+  EmailsS3BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref EmailsS3Bucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              CanonicalUser: !GetAtt CloudFrontOAI.S3CanonicalUserId
+            Action: s3:GetObject
+            Resource: !Sub "${EmailsS3Bucket.Arn}/*"
 
   StaticAssetsS3BucketPolicy:
     Type: AWS::S3::BucketPolicy

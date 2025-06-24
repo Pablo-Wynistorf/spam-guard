@@ -1,11 +1,12 @@
 version = 0.1
 
 [default.deploy.parameters]
-stack_name = "sam-app"
+stack_name = "spam-guard"
 resolve_s3 = true
-s3_prefix = "sam-app"
+s3_prefix = "spam-guard"
 region = "eu-central-1"
 confirm_changeset = true
 capabilities = "CAPABILITY_IAM"
 image_repositories = []
 disable_rollback = true
+parameter_overrides = "EmailDomains=\"[\\\"appengine.ch\\\"]\""
