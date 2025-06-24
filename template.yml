@@ -20,7 +20,6 @@ Globals:
     Architectures: [arm64]
 
 Resources:
-
   SpamGuardApi:
     Type: AWS::Serverless::Api
     Properties:
@@ -125,7 +124,7 @@ Resources:
   emailsTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: emailsTable
+      TableName: SpamGuardEmailsTable
       AttributeDefinitions:
         - AttributeName: emailId
           AttributeType: S
@@ -150,6 +149,11 @@ Resources:
       BucketName: !Sub "spam-guard-static-assets-${AWS::AccountId}-${AWS::Region}"
       WebsiteConfiguration:
         IndexDocument: index.html
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: false
+        RestrictPublicBuckets: false
 
   SpamGuardStaticAssetsOAC:
     Type: AWS::CloudFront::OriginAccessControl
