@@ -1,12 +1,12 @@
 /* global Noty */
 
-const mailList       = document.getElementById("mailList");
-const preview        = document.getElementById("preview");
-const emailDisplay   = document.getElementById("emailDisplay");
-const countdownEl    = document.getElementById("countdown");
+const mailList = document.getElementById("mailList");
+const preview = document.getElementById("preview");
+const emailDisplay = document.getElementById("emailDisplay");
+const countdownEl = document.getElementById("countdown");
 
-let countdown  = 10;
-let emailText  = "";
+let countdown = 10;
+let emailText = "";
 
 /* ───────────────────────────────── COOKIES & JWT ───────────────────────────── */
 
@@ -18,8 +18,8 @@ function getCookie(name) {
 function parseJwt(token) {
   try {
     const [, base64Url] = token.split(".");
-    const base64        = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-    const jsonPayload   = decodeURIComponent(atob(base64).split("").map(c =>
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const jsonPayload = decodeURIComponent(atob(base64).split("").map(c =>
       "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2)
     ).join(""));
     return JSON.parse(jsonPayload);
@@ -27,10 +27,10 @@ function parseJwt(token) {
 }
 
 function displayEmail() {
-  const jwt     = getCookie("email_session");
+  const jwt = getCookie("email_session");
   const payload = parseJwt(jwt);
   if (payload?.email) {
-    emailText            = payload.email;
+    emailText = payload.email;
     emailDisplay.textContent = payload.email;
   } else {
     window.location.href = "/";
@@ -134,13 +134,25 @@ async function loadEmail(url) {
   preview.innerHTML = "<p class='text-gray-500 italic'>Loading…</p>";
   try {
     const res = await fetch(url);
-    if (!res.ok) throw Error("Failed to load email content");
+    if (!res.ok) throw new Error("Failed to load email content");
     const html = await res.text();
-    preview.innerHTML = html;
+
+    preview.innerHTML = `
+      <iframe class="w-full h-full rounded-xl border border-gray-700"
+              sandbox="allow-same-origin"
+              style="background-color: white"
+              srcdoc="${html.replace(/"/g, '&quot;')}">
+      </iframe>
+    `;
   } catch {
     preview.innerHTML = "<p class='text-red-500'>Error loading email content.</p>";
   }
 }
+
+
+
+
+
 
 /* ─────────────────────────── REFRESH & COUNTDOWN ─────────────────────────── */
 
@@ -166,14 +178,18 @@ function startCountdownLoop() {
 /* ───────────────────────────────── NOTY HELPERS ──────────────────────────── */
 
 function alertError(message) {
-  new Noty({ text: message, type: "error",
-             layout: "bottomRight", timeout: 5000,
-             theme: "metroui", progressBar: true }).show();
+  new Noty({
+    text: message, type: "error",
+    layout: "bottomRight", timeout: 5000,
+    theme: "metroui", progressBar: true
+  }).show();
 }
 function alertSuccess(message) {
-  new Noty({ text: message, type: "success",
-             layout: "bottomRight", timeout: 5000,
-             theme: "metroui", progressBar: true }).show();
+  new Noty({
+    text: message, type: "success",
+    layout: "bottomRight", timeout: 5000,
+    theme: "metroui", progressBar: true
+  }).show();
 }
 
 /* ─────────────────────────────── INIT ────────────────────────────────────── */
