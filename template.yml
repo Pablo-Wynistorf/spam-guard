@@ -3,14 +3,9 @@ Transform: AWS::Serverless-2016-10-31
 Description: Deploys spam-guard Lambda functions and static content with CloudFront
 
 Parameters:
-  JwtSecret:
-    Type: String
-    NoEcho: true
-    Description: JWT secret for signing tokens
-
   EmailDomains:
     Type: String
-    Description: JSON-encoded list of allowed email domains (e.g., ["appengine.ch"])
+    Description: "Comma-separated list of email domains to process"
 
 Globals:
   Function:
@@ -20,6 +15,17 @@ Globals:
     Architectures: [arm64]
 
 Resources:
+  JwtSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: SpamGuardJWTSecret
+      Description: Secret used to sign JWTs
+      GenerateSecretString:
+        SecretStringTemplate: "{}"
+        GenerateStringKey: jwtSecret
+        PasswordLength: 64
+        ExcludePunctuation: true
+
   SpamGuardApi:
     Type: AWS::Serverless::Api
     Properties:
@@ -35,7 +41,7 @@ Resources:
       Environment:
         Variables:
           EMAIL_DOMAINS: !Ref EmailDomains
-          JWT_SECRET: !Ref JwtSecret
+          JWT_SECRET: !Sub "{{resolve:secretsmanager:${JwtSecret}::jwtSecret}}"
           TABLE_NAME: !Ref emailsTable
       Events:
         Api:
@@ -60,7 +66,7 @@ Resources:
       CodeUri: src/lambdas/fetch-emails/
       Environment:
         Variables:
-          JWT_SECRET: !Ref JwtSecret
+          JWT_SECRET: !Sub "{{resolve:secretsmanager:${JwtSecret}::jwtSecret}}"
           TABLE_NAME: !Ref emailsTable
       Events:
         Api:
@@ -254,16 +260,43 @@ Resources:
 
         ViewerCertificate:
           CloudFrontDefaultCertificate: true
+    
+  SnsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: SpamGuardEmailNotification
+  
+  SnsTopicSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref SnsTopic
+      Protocol: lambda
+      Endpoint: !GetAtt EmailProcessorFunction.Arn
+
+  SesRuleSet:
+    Type: AWS::SES::ReceiptRuleSet
+    Properties:
+      RuleSetName: SpamGuardRuleSet
+      Enabled: true
+
+  SesReceiptRule:
+    Type: AWS::SES::ReceiptRule
+    Properties:
+      RuleSetName: SpamGuardRuleSet
+      Rule:
+        Name: process-email
+        Enabled: true
+        Recipients:
+          - !Select [0, !Split [",", !Ref EmailDomains]]
+        Actions:
+          - SNSAction:
+              TopicArn: !Ref SnsTopic
+              Encoding: UTF-8
+        ScanEnabled: true
+        TlsPolicy: Optional
+
 
 Outputs:
-  ApiUrl:
-    Description: API Gateway endpoint
-    Value: !Sub "https://${SpamGuardApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
-
-  StaticBucketName:
-    Description: Name of the S3 bucket for static files
-    Value: !Ref StaticAssetsS3Bucket
-
   CloudFrontURL:
     Description: Access the static frontend via CloudFront
     Value: !GetAtt CloudFrontDistribution.DomainName

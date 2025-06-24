@@ -5,121 +5,63 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Mailbox</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      animation: fadeIn 0.8s ease-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
 </head>
-<body class="bg-gray-100 min-h-screen flex flex-col">
+<body class="bg-gray-900 text-gray-100 h-screen flex flex-col font-sans overflow-hidden">
 
   <!-- Topbar -->
-  <div class="w-full bg-white shadow p-4 flex justify-between items-center">
-    <div id="emailDisplay" class="text-sm text-gray-700 font-medium">
-      Loading email...
+  <header class="w-full rounded-2xl bg-gray-800 shadow p-4 m-3 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between relative space-y-4 sm:space-y-0 z-10">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:space-x-4 space-y-2 sm:space-y-0 text-center sm:text-left">
+      <h1 id="emailDisplay" class="text-2xl sm:text-3xl font-bold text-white">
+        Loading email...
+      </h1>
+      <div class="flex flex-wrap justify-center sm:justify-start gap-2">
+        <button onclick="copyEmail()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded">
+          Copy
+        </button>
+        <button onclick="manualRefresh()" class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded">
+          Refresh
+        </button>
+      </div>
     </div>
-    <button onclick="logout()" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
-      Logout
-    </button>
-  </div>
+    <div class="flex justify-center sm:justify-end">
+      <button onclick="logout()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded w-full sm:w-auto">
+        Logout
+      </button>
+    </div>
+    <p id="countdown" class="text-sm text-gray-400 sm:absolute sm:bottom-2 sm:left-6 mt-2 sm:mt-0 text-center sm:text-left">
+      Refreshing in 10s
+    </p>
+  </header>
 
-  <div class="flex flex-col sm:flex-row flex-1">
+  <!-- Main layout -->
+  <div class="flex flex-1 overflow-hidden px-3 pb-3">
 
-    <!-- Sidebar: Mail list -->
-    <aside class="sm:w-1/3 w-full border-r border-gray-300 bg-white p-4 overflow-y-auto">
-      <h2 class="text-xl font-semibold mb-4">Inbox</h2>
-      <ul id="mailList" class="space-y-2">
-        <!-- Emails will be rendered here -->
+    <!-- Sidebar -->
+    <aside class="w-full sm:w-1/3 rounded-2xl bg-gray-800 border-t sm:border-t-0 sm:border-r border-gray-700 p-6 flex flex-col">
+      <h2 class="text-xl font-semibold mb-4 text-white">Inbox</h2>
+      <ul id="mailList" class="space-y-4 overflow-y-auto pr-2" style="flex: 1; max-height: 100%;">
+        <!-- Messages injected by JS -->
       </ul>
     </aside>
 
-    <!-- Main content: HTML email preview -->
-    <main class="flex-1 bg-gray-50 p-4 overflow-y-auto">
-      <div id="preview" class="w-full h-[70vh] border border-gray-300 rounded-lg bg-white shadow-inner overflow-auto p-4">
-        <p class="text-gray-500 italic">Select an email to view its content.</p>
+    <!-- Main Content -->
+    <main class="flex-1 bg-gray-900 pl-3 flex">
+      <div id="preview" class="w-full h-full border border-gray-700 rounded-2xl bg-gray-800 shadow-inner p-6 overflow-y-auto">
+        <p class="text-gray-400 italic">Select an email to view its content.</p>
       </div>
     </main>
 
   </div>
 
-  <script>
-    const mailList = document.getElementById("mailList");
-    const preview = document.getElementById("preview");
-    const emailDisplay = document.getElementById("emailDisplay");
-
-    function getCookie(name) {
-      const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
-      return match ? decodeURIComponent(match[2]) : null;
-    }
-
-    function parseJwt(token) {
-      try {
-        const base64Url = token.split('.')[1];
-        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-        const jsonPayload = decodeURIComponent(atob(base64).split('').map(c =>
-          '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
-        ).join(''));
-        return JSON.parse(jsonPayload);
-      } catch {
-        return null;
-      }
-    }
-
-    function displayEmail() {
-      const jwt = getCookie("email_session");
-      const payload = parseJwt(jwt);
-      if (payload?.email) {
-        emailDisplay.textContent = `Your temporary email: ${payload.email}`;
-      } else {
-        emailDisplay.textContent = "Invalid session or no email found";
-      }
-    }
-
-    function logout() {
-      document.cookie = "email_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
-      window.location.href = "/";
-    }
-
-    async function fetchEmails() {
-      try {
-        const res = await fetch("/api/fetch-emails", { credentials: "include" });
-        if (!res.ok) throw new Error("Auth failed or server error");
-
-        const data = await res.json();
-        if (!Array.isArray(data.emails)) throw new Error("Malformed response");
-
-        if (data.emails.length === 0) {
-          mailList.innerHTML = "<li class='text-gray-500 italic'>No emails found.</li>";
-          return;
-        }
-
-        data.emails.forEach(email => {
-          const li = document.createElement("li");
-          li.className = "cursor-pointer p-3 rounded hover:bg-blue-50 border border-gray-200";
-          li.innerHTML = `
-            <p class="font-semibold">${email.subject}</p>
-            <p class="text-sm text-gray-500">${email.sender}</p>
-            <p class="text-xs text-gray-400">${new Date(email.date).toLocaleString()}</p>
-          `;
-          li.addEventListener("click", () => loadEmail(`/${email.s3Key}`));
-          mailList.appendChild(li);
-        });
-      } catch (err) {
-        console.error("Failed to fetch emails:", err);
-        mailList.innerHTML = "<li class='text-red-500'>Error loading inbox.</li>";
-      }
-    }
-
-    async function loadEmail(url) {
-      preview.innerHTML = "<p class='text-gray-400 italic'>Loading...</p>";
-      try {
-        const res = await fetch(url);
-        if (!res.ok) throw new Error("Failed to load email");
-        const html = await res.text();
-        preview.innerHTML = html;
-      } catch (err) {
-        preview.innerHTML = "<p class='text-red-500'>Error loading email content.</p>";
-      }
-    }
-
-    displayEmail();
-    fetchEmails();
-  </script>
-
+  <script src="index.js"></script>
 </body>
 </html>

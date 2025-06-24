@@ -1,7 +1,7 @@
 import { DynamoDBClient, QueryCommand } from "@aws-sdk/client-dynamodb";
 import jwt from "jsonwebtoken";
 
-const EMAIL_DOMAINS = JSON.parse(process.env.EMAIL_DOMAINS || "[]");
+const EMAIL_DOMAINS = process.env.EMAIL_DOMAINS.split(',');
 const JWT_SECRET = process.env.JWT_SECRET;
 const TABLE_NAME = process.env.TABLE_NAME;
 
