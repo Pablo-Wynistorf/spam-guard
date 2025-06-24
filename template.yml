@@ -121,17 +121,21 @@ Resources:
         InstallCommands:
           - npm install
 
-  emailsTable:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      TableName: SpamGuardEmailsTable
-      AttributeDefinitions:
-        - AttributeName: emailId
-          AttributeType: S
-      KeySchema:
-        - AttributeName: emailId
-          KeyType: HASH
-      BillingMode: PAY_PER_REQUEST
+    emailsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: SpamGuardEmailsTable
+        AttributeDefinitions:
+          - AttributeName: email
+            AttributeType: S
+          - AttributeName: emailId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: email
+            KeyType: HASH
+          - AttributeName: emailId
+            KeyType: RANGE
+        BillingMode: PAY_PER_REQUEST
       StreamSpecification:
         StreamViewType: NEW_AND_OLD_IMAGES
       TimeToLiveSpecification:
@@ -238,7 +242,7 @@ Resources:
             DefaultTTL: 0
             MaxTTL: 0
 
-          - PathPattern: "/api/emails/*"
+          - PathPattern: "/emails/*"
             TargetOriginId: EmailS3Origin
             ViewerProtocolPolicy: redirect-to-https
             AllowedMethods: [GET, HEAD]

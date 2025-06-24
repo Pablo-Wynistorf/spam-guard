@@ -1,7 +1,7 @@
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { DynamoDBClient, PutItemCommand } from "@aws-sdk/client-dynamodb";
 import { simpleParser } from "mailparser";
-import crypto from "crypto";
+import { uuidv4 } from "uuid";
 
 const s3 = new S3Client({});
 const dynamodb = new DynamoDBClient({});
@@ -17,7 +17,8 @@ export const handler = async (event) => {
     const notification = JSON.parse(snsMessage);
     const mail = notification.mail || {};
     const rawMime = notification.content;
-    const messageId = mail.messageId || crypto.randomUUID();
+    
+    const messageId = uuidv4();
 
     const parsedEmail = await simpleParser(Buffer.from(rawMime, "base64"));
 
@@ -41,7 +42,8 @@ export const handler = async (event) => {
     await dynamodb.send(new PutItemCommand({
       TableName: TABLE_NAME,
       Item: {
-        emailId:  { S: mail.destination?.[0] },
+        email:  { S: mail.destination?.[0] },
+        emailId: { S: messageId },
         subject:  { S: parsedEmail.subject || "(No Subject)" },
         sender:   { S: parsedEmail.from?.text || mail.source || "unknown@sender" },
         s3Key:    { S: key },

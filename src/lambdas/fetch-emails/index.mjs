@@ -15,7 +15,7 @@ function parseCookies(cookieHeader) {
     }, {});
 }
 
-exports.handler = async (event) => {
+export const handler = async (event) => {
     const headers = event.headers || {};
     const cookies = parseCookies(headers.Cookie || headers.cookie);
     const token = cookies['email_session'];
@@ -37,14 +37,14 @@ exports.handler = async (event) => {
         };
     }
 
-    const email = decoded.email;
+    const email = decoded.email.toLowerCase();
 
     try {
         const result = await dynamodb.send(new QueryCommand({
             TableName: TABLE_NAME,
-            KeyConditionExpression: 'emailId = :emailId',
+            KeyConditionExpression: 'email = :email',
             ExpressionAttributeValues: {
-                ':emailId': { S: email },
+                ':email': { S: email },
             },
         }));
 

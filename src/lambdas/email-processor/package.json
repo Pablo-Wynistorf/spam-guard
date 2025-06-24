@@ -11,6 +11,7 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "mailparser": "^3.7.3"
+    "mailparser": "^3.7.3",
+    "uuid": "^11.1.0"
   }
 }
