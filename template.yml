@@ -141,6 +141,13 @@ Resources:
       TimeToLiveSpecification:
         AttributeName: ttl
         Enabled: true
+      GlobalSecondaryIndexes:
+        - IndexName: EmailIndex
+          KeySchema:
+            - AttributeName: email
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
 
   EmailsS3Bucket:
     Type: AWS::S3::Bucket
@@ -205,9 +212,9 @@ Resources:
         DefaultRootObject: index.html
         Origins:
           - Id: StaticS3Origin
-            DomainName: !GetAtt StaticAssetsS3Bucket.RegionalDomainName
-            S3OriginConfig: {}
-            OriginAccessControlId: !Ref SpamGuardStaticAssetsOAC
+            DomainName: !Select [1, !Split ["//", !GetAtt StaticAssetsS3Bucket.WebsiteURL]]
+            CustomOriginConfig:
+              OriginProtocolPolicy: http-only
           - Id: EmailS3Origin
             DomainName: !GetAtt EmailsS3Bucket.RegionalDomainName
             S3OriginConfig: {}
