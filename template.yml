@@ -34,7 +34,7 @@ Resources:
         Api:
           Type: Api
           Properties:
-            Path: /create-mailbox
+            Path: create-mailbox
             Method: post
       Policies:
         - DynamoDBReadPolicy:
@@ -58,7 +58,7 @@ Resources:
         Api:
           Type: Api
           Properties:
-            Path: /fetch-emails
+            Path: fetch-emails
             Method: get
       Policies:
         - DynamoDBReadPolicy:
@@ -189,7 +189,7 @@ Resources:
             S3OriginConfig:
               OriginAccessIdentity: !Sub "origin-access-identity/cloudfront/${CloudFrontOAI}"
           - Id: ApiOrigin
-            DomainName: !Sub "${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com"
+            DomainName: !Sub "${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod"
             CustomOriginConfig:
               OriginProtocolPolicy: https-only
 
