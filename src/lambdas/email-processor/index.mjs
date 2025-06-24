@@ -6,7 +6,7 @@ const s3 = new S3Client({});
 const dynamodb = new DynamoDBClient({});
 
 const EMAIL_STORAGE_BUCKET = process.env.EMAIL_STORAGE_BUCKET;
-
+const TABLE_NAME = process.env.TABLE_NAME;
 
 export const handler = async (event) => {
   try {
@@ -38,7 +38,7 @@ export const handler = async (event) => {
     const ttl = Math.floor(Date.now() / 1000) + 15 * 60;
 
     await dynamodb.send(new PutItemCommand({
-      TableName: "emailsTable",
+      TableName: TABLE_NAME,
       Item: {
         emailId: { S: email },
         subject:   { S: subject },

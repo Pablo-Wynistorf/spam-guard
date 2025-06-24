@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Temp Email Generator</title>
+  <title>Spam Guard</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 flex items-center justify-center min-h-screen px-4">
   <div class="w-full max-w-md bg-white rounded-2xl shadow-xl p-6 text-center">
-    <h1 class="text-2xl font-bold mb-4 text-gray-800">Temporary Email Generator</h1>
+    <h1 class="text-2xl font-bold mb-4 text-gray-800">Spam Guard</h1>
     
     <button
       id="generateBtn"
@@ -33,7 +33,7 @@
       button.textContent = "Generating...";
 
       try {
-        const res = await fetch("https://api.mailboxboy.com/temp-email", {
+        const res = await fetch("/api/create-mailbox", {
           method: "POST",
           headers: { "Content-Type": "application/json" }
         });

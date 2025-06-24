@@ -2,6 +2,16 @@ AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
 Description: Deploys spam-guard Lambda functions and static content with CloudFront
 
+Parameters:
+  JwtSecret:
+    Type: String
+    NoEcho: true
+    Description: JWT secret for signing tokens
+
+  EmailDomains:
+    Type: String
+    Description: JSON-encoded list of allowed email domains (e.g., ["appengine.ch"])
+
 Globals:
   Function:
     Runtime: nodejs22.x
@@ -10,12 +20,16 @@ Globals:
     Architectures: [arm64]
 
 Resources:
-
-  CreateEmailSessionFunction:
+  CreateEmailMailboxFunction:
     Type: AWS::Serverless::Function
     Properties:
       Handler: index.handler
       CodeUri: src/lambdas/create-mailbox/
+      Environment:
+        Variables:
+          EMAIL_DOMAINS: !Ref EmailDomains
+          JWT_SECRET: !Ref JwtSecret
+          TABLE_NAME: !Ref EmailsTable
       Events:
         Api:
           Type: Api
@@ -33,6 +47,10 @@ Resources:
     Properties:
       Handler: index.handler
       CodeUri: src/lambdas/fetch-emails/
+      Environment:
+        Variables:
+          JWT_SECRET: !Ref JwtSecret
+          TABLE_NAME: !Ref EmailsTable
       Events:
         Api:
           Type: Api
@@ -50,6 +68,10 @@ Resources:
     Properties:
       Handler: index.handler
       CodeUri: src/lambdas/email-processor/
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref EmailsTable
+          EMAIL_STORAGE_BUCKET: !Ref EmailsS3Bucket
     Metadata:
       BuildMethod: nodejs22.x
       BuildProperties:
@@ -61,6 +83,9 @@ Resources:
     Properties:
       Handler: index.handler
       CodeUri: src/lambdas/dynamodb-stream-processor/
+      Environment:
+        Variables:
+          EMAIL_STORAGE_BUCKET: !Ref EmailsS3Bucket
       Events:
         Stream:
           Type: DynamoDB
@@ -84,8 +109,11 @@ Resources:
         - AttributeName: emailId
           KeyType: HASH
       BillingMode: PAY_PER_REQUEST
-      StreamSpecification:
-        StreamViewType: NEW_IMAGE
+    StreamSpecification:
+      StreamViewType: NEW_AND_OLD_IMAGES
+    TimeToLiveSpecification:
+      AttributeName: ttl
+      Enabled: true
 
   EmailsS3Bucket:
     Type: AWS::S3::Bucket
@@ -103,6 +131,34 @@ Resources:
           - AllowedHeaders: ["*"]
             AllowedMethods: [GET]
             AllowedOrigins: ["*"]
+
+  CreateMailboxS3HTMLObject:
+    Type: AWS::S3::BucketObject
+    Properties:
+      Bucket: !Ref StaticAssetsS3Bucket
+      Key: index.html
+      Source: src/frontend/create-mailbox/index.html
+  
+  CreateMailboxS3JSObject:
+    Type: AWS::S3::BucketObject
+    Properties:
+      Bucket: !Ref StaticAssetsS3Bucket
+      Key: index.js
+      Source: src/frontend/create-mailbox/index.js
+
+  MailboxS3HTMLObject:
+    Type: AWS::S3::BucketObject
+    Properties:
+      Bucket: !Ref StaticAssetsS3Bucket
+      Key: mailbox/index.html
+      Source: src/frontend/mailbox/index.html
+  
+  MailboxS3JSObject:
+    Type: AWS::S3::BucketObject
+    Properties:
+      Bucket: !Ref StaticAssetsS3Bucket
+      Key: mailbox/index.js
+      Source: src/frontend/mailbox/index.js
 
   CloudFrontOAI:
     Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
