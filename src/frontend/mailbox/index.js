@@ -96,9 +96,17 @@ async function loadEmail(url) {
 }
 
 function manualRefresh() {
+    const icon = document.getElementById("refreshIcon");
+    icon.classList.add("animate-spin");
+
     countdown = 10;
     fetchEmails();
+
+    setTimeout(() => {
+        icon.classList.remove("animate-spin");
+    }, 1000);
 }
+
 
 function startCountdownLoop() {
     setInterval(() => {
