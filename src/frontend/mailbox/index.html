@@ -2,9 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Mailbox</title>
   <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Noty.js -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/noty@3.2.0-beta-deprecated/lib/noty.css" />
+  <script src="https://cdn.jsdelivr.net/npm/noty@3.2.0-beta-deprecated/lib/noty.min.js"></script>
+
   <style>
     body {
       animation: fadeIn 0.8s ease-out;
@@ -15,53 +20,44 @@
     }
   </style>
 </head>
-<body class="bg-gray-900 text-gray-100 h-screen flex flex-col font-sans overflow-hidden">
+<body class="flex flex-col h-screen overflow-hidden bg-gray-900 text-gray-100 font-sans">
 
   <!-- Topbar -->
-  <header class="w-full rounded-2xl bg-gray-800 shadow p-4 m-3 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between relative space-y-4 sm:space-y-0 z-10">
-    <div class="flex flex-col sm:flex-row sm:items-center sm:space-x-4 space-y-2 sm:space-y-0 text-center sm:text-left">
-      <h1 id="emailDisplay" class="text-2xl sm:text-3xl font-bold text-white">
-        Loading email...
-      </h1>
+  <header class="relative z-10 m-3 rounded-2xl bg-gray-800 p-4 sm:p-6 shadow flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:space-x-4 text-center sm:text-left space-y-2 sm:space-y-0">
+      <h1 id="emailDisplay" class="text-2xl sm:text-3xl font-bold text-white">Loading email...</h1>
       <div class="flex flex-wrap justify-center sm:justify-start gap-2">
-        <button onclick="copyEmail()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded">
-          Copy
-        </button>
-        <button onclick="manualRefresh()" class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded">
-          Refresh
-        </button>
+        <button onclick="copyEmail()" class="rounded bg-blue-600 px-3 py-1 text-white hover:bg-blue-700">Copy</button>
+        <button onclick="manualRefresh()" class="rounded bg-yellow-500 px-3 py-1 text-white hover:bg-yellow-600">Refresh</button>
       </div>
     </div>
     <div class="flex justify-center sm:justify-end">
-      <button onclick="logout()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded w-full sm:w-auto">
-        Logout
-      </button>
+      <button onclick="deleteEmail()" class="w-full sm:w-auto rounded bg-red-600 px-4 py-2 text-white hover:bg-red-700">Delete Email address</button>
     </div>
-    <p id="countdown" class="text-sm text-gray-400 sm:absolute sm:bottom-2 sm:left-6 mt-2 sm:mt-0 text-center sm:text-left">
+    <p id="countdown" class="mt-2 text-center text-sm text-gray-400 sm:absolute sm:bottom-2 sm:left-6 sm:mt-0 sm:text-left">
       Refreshing in 10s
     </p>
   </header>
 
-  <!-- Main layout -->
-  <div class="flex flex-1 overflow-hidden px-3 pb-3">
+  <!-- Layout -->
+  <div class="flex flex-col sm:flex-row flex-1 overflow-hidden px-3 pb-3 gap-3">
 
     <!-- Sidebar -->
-    <aside class="w-full sm:w-1/3 rounded-2xl bg-gray-800 border-t sm:border-t-0 sm:border-r border-gray-700 p-6 flex flex-col">
-      <h2 class="text-xl font-semibold mb-4 text-white">Inbox</h2>
-      <ul id="mailList" class="space-y-4 overflow-y-auto pr-2" style="flex: 1; max-height: 100%;">
+    <aside class="w-full sm:w-1/3 h-1/2 sm:h-auto rounded-2xl bg-gray-800 border border-gray-700 p-4 sm:p-6 flex flex-col overflow-hidden">
+      <h2 class="mb-4 text-xl font-semibold text-white">Inbox</h2>
+      <ul id="mailList" class="flex-1 space-y-4 overflow-y-auto pr-2">
         <!-- Messages injected by JS -->
       </ul>
     </aside>
 
-    <!-- Main Content -->
-    <main class="flex-1 bg-gray-900 pl-3 flex">
-      <div id="preview" class="w-full h-full border border-gray-700 rounded-2xl bg-gray-800 shadow-inner p-6 overflow-y-auto">
-        <p class="text-gray-400 italic">Select an email to view its content.</p>
+    <!-- Preview -->
+    <main class="flex-1 flex bg-gray-900">
+      <div id="preview" class="w-full h-full overflow-y-auto rounded-2xl border border-gray-700 bg-gray-800 p-4 sm:p-6 shadow-inner">
+        <p class="italic text-gray-400">Select an email to view its content.</p>
       </div>
     </main>
 
   </div>
-
   <script src="index.js"></script>
 </body>
 </html>

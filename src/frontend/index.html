@@ -34,13 +34,6 @@
         Generate Temp Email
       </button>
 
-      <!-- Result -->
-      <div id="result" class="w-full bg-gray-700 text-gray-200 rounded-lg p-4 hidden">
-        <span class="font-medium text-sm text-gray-400">Your temp email:</span>
-        <div id="email" class="mt-1 text-blue-400 break-words font-mono"></div>
-      </div>
-    </div>
-
     <!-- Footer countdown or info -->
     <div class="text-center text-sm text-gray-500">
       You'll be redirected to your inbox after email creation.
@@ -49,7 +42,6 @@
 
   <script>
     const button = document.getElementById("generateBtn");
-    const result = document.getElementById("result");
     const emailField = document.getElementById("email");
 
     button.addEventListener("click", async () => {
@@ -66,14 +58,9 @@
 
         const data = await res.json();
         emailField.textContent = data.email || "No email returned";
-        result.classList.remove("hidden");
-
-        setTimeout(() => {
-          window.location.replace("/mailbox");
-        }, 1000);
+        window.location.replace("/mailbox");
       } catch (err) {
         emailField.textContent = "Error generating email";
-        result.classList.remove("hidden");
       } finally {
         button.disabled = false;
         button.textContent = "Generate Temp Email";

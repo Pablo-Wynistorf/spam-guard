@@ -30,16 +30,25 @@ function displayEmail() {
         emailText = payload.email;
         emailDisplay.textContent = payload.email;
     } else {
-        window.location.href = "/"
+        window.location.href = "/";
     }
 }
 
 function copyEmail() {
     if (!emailText) return;
-    navigator.clipboard.writeText(emailText);
+    navigator.clipboard.writeText(emailText).then(() => {
+        new Noty({
+            type: 'success',
+            layout: 'bottomRight',
+            theme: 'metroui',
+            timeout: 2000,
+            text: 'Email copied to clipboard',
+            progressBar: true
+        }).show();
+    });
 }
 
-function logout() {
+function deleteEmail() {
     document.cookie = "email_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
     window.location.href = "/";
 }
