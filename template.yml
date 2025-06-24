@@ -121,26 +121,26 @@ Resources:
         InstallCommands:
           - npm install
 
-    emailsTable:
-      Type: AWS::DynamoDB::Table
-      Properties:
-        TableName: SpamGuardEmailsTable
-        AttributeDefinitions:
-          - AttributeName: email
-            AttributeType: S
-          - AttributeName: emailId
-            AttributeType: S
-        KeySchema:
-          - AttributeName: email
-            KeyType: HASH
-          - AttributeName: emailId
-            KeyType: RANGE
-        BillingMode: PAY_PER_REQUEST
-      StreamSpecification:
-        StreamViewType: NEW_AND_OLD_IMAGES
-      TimeToLiveSpecification:
-        AttributeName: ttl
-        Enabled: true
+  emailsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: SpamGuardEmailsTable
+      AttributeDefinitions:
+        - AttributeName: email
+          AttributeType: S
+        - AttributeName: emailId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: email
+          KeyType: HASH
+        - AttributeName: emailId
+          KeyType: RANGE
+      BillingMode: PAY_PER_REQUEST
+    StreamSpecification:
+      StreamViewType: NEW_AND_OLD_IMAGES
+    TimeToLiveSpecification:
+      AttributeName: ttl
+      Enabled: true
 
   EmailsS3Bucket:
     Type: AWS::S3::Bucket
