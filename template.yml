@@ -37,6 +37,8 @@ Resources:
           EMAIL_DOMAIN: !Ref EmailDomain
           JWT_SECRET: !Ref JwtSecret
           TABLE_NAME: !Ref emailsTable
+          SES_RULE_SET_NAME: SpamGuardRuleSet
+          SES_RULE_NAME: SpamGuardRule
       Events:
         Api:
           Type: Api
@@ -47,6 +49,12 @@ Resources:
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Ref emailsTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ses:UpdateReceiptRule
+                - ses:DescribeReceiptRule
+              Resource: "*"
     Metadata:
       BuildMethod: nodejs22.x
       BuildProperties:
@@ -111,6 +119,8 @@ Resources:
       Environment:
         Variables:
           EMAIL_STORAGE_BUCKET: !Ref EmailsS3Bucket
+          SES_RULE_SET_NAME: SpamGuardRuleSet
+          SES_RULE_NAME: SpamGuardRule
       Events:
         Stream:
           Type: DynamoDB
@@ -120,6 +130,12 @@ Resources:
       Policies:
         - S3CrudPolicy:
             BucketName: !Ref EmailsS3Bucket
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ses:UpdateReceiptRule
+                - ses:DescribeReceiptRule
+              Resource: "*"
     Metadata:
       BuildMethod: nodejs22.x
       BuildProperties:
@@ -275,10 +291,8 @@ Resources:
     Properties:
       RuleSetName: SpamGuardRuleSet
       Rule:
-        Name: process-email
+        Name: SpamGuardRule 
         Enabled: true
-        Recipients:
-          - !Ref EmailDomain
         Actions:
           - SNSAction:
               TopicArn: !Ref SnsTopic

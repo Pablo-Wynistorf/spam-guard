@@ -1,11 +1,19 @@
 import { DynamoDBClient, QueryCommand } from "@aws-sdk/client-dynamodb";
+import {
+    SESClient,
+    DescribeReceiptRuleCommand,
+    UpdateReceiptRuleCommand
+} from "@aws-sdk/client-ses";
 import jwt from "jsonwebtoken";
 
 const EMAIL_DOMAIN = process.env.EMAIL_DOMAIN;
 const JWT_SECRET = process.env.JWT_SECRET;
 const TABLE_NAME = process.env.TABLE_NAME;
+const SES_RULE_SET_NAME = process.env.SES_RULE_SET_NAME;
+const SES_RULE_NAME = process.env.SES_RULE_NAME;
 
 const dynamodb = new DynamoDBClient({});
+const ses = new SESClient({});
 
 function generateRandomString() {
     const characters = "abcdefghijklmnopqrstuvwxyz0123456789";
@@ -16,8 +24,37 @@ function generateRandomString() {
     return result;
 }
 
+async function addEmailToSesRule(newEmail) {
+    try {
+        const { Rule } = await ses.send(new DescribeReceiptRuleCommand({
+            RuleSetName: SES_RULE_SET_NAME,
+            RuleName: SES_RULE_NAME
+        }));
+
+        if (!Rule) throw new Error("SES rule not found");
+
+        const existingRecipients = Rule.Recipients || [];
+        if (existingRecipients.includes(newEmail)) return;
+
+        const updatedRule = {
+            ...Rule,
+            Recipients: [...existingRecipients, newEmail]
+        };
+
+        await ses.send(new UpdateReceiptRuleCommand({
+            RuleSetName: SES_RULE_SET_NAME,
+            Rule: updatedRule
+        }));
+
+        console.log(`Added ${newEmail} to SES recipient rule.`);
+    } catch (err) {
+        console.error("Failed to update SES rule:", err);
+        throw err;
+    }
+}
+
 export const handler = async (event) => {
-    if (!EMAIL_DOMAIN.length) {
+    if (!EMAIL_DOMAIN?.length) {
         return {
             statusCode: 500,
             body: JSON.stringify({ error: "EMAIL_DOMAIN not configured" }),
@@ -61,6 +98,15 @@ export const handler = async (event) => {
         return {
             statusCode: 500,
             body: JSON.stringify({ error: "Could not generate a unique email" }),
+        };
+    }
+
+    try {
+        await addEmailToSesRule(email);
+    } catch (err) {
+        return {
+            statusCode: 500,
+            body: JSON.stringify({ error: "Failed to update SES rule" }),
         };
     }
 
