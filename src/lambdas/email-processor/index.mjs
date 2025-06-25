@@ -17,9 +17,17 @@ export const handler = async (event) => {
     const notification = JSON.parse(snsMessage);
     const mail = notification.mail || {};
     const rawMime = notification.content;
-    
-    const messageId = uuidv4();
 
+    const destinationEmails = mail.destination || [];
+
+    if (destinationEmails.includes("recipient@example.com")) {
+      return {
+        statusCode: 200,
+        body: JSON.stringify({ message: "Email to recipient@example.com ignored" })
+      };
+    }
+
+    const messageId = uuidv4();
     const parsedEmail = await simpleParser(Buffer.from(rawMime, "base64"));
 
     const htmlBody = parsedEmail.html
@@ -42,7 +50,7 @@ export const handler = async (event) => {
     await dynamodb.send(new PutItemCommand({
       TableName: TABLE_NAME,
       Item: {
-        email:  { S: mail.destination?.[0] },
+        email:  { S: destinationEmails[0] || "unknown@recipient" },
         emailId: { S: messageId },
         subject:  { S: parsedEmail.subject || "(No Subject)" },
         sender:   { S: parsedEmail.from?.text || mail.source || "unknown@sender" },
