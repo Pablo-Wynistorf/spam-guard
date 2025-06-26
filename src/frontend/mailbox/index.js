@@ -171,7 +171,7 @@ function startCountdownLoop() {
       fetchEmails();
       countdown = 10;
     }
-    countdownEl.textContent = `Refreshing in ${countdown}s`;
+    countdownEl.textContent = `${countdown} s`;
   }, 1000);
 }
 
