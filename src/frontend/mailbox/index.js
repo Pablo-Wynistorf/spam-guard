@@ -169,7 +169,7 @@ function startCountdownLoop() {
     countdown--;
     if (countdown <= 0) {
       fetchEmails();
-      countdown = 10;
+      countdown = 9;
     }
     countdownEl.textContent = ` ${countdown} s`;
   }, 1000);
