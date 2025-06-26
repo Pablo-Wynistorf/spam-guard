@@ -159,7 +159,7 @@ async function loadEmail(url) {
 function manualRefresh() {
   const icon = document.getElementById("refreshIcon");
   icon.classList.add("animate-spin");
-  countdown = 10;
+  countdown = 9;
   fetchEmails();
   setTimeout(() => icon.classList.remove("animate-spin"), 900);
 }
