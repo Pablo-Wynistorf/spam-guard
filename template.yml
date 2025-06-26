@@ -47,7 +47,7 @@ Resources:
             Path: /api/create-mailbox
             Method: post
       Policies:
-        - DynamoDBReadPolicy:
+        - DynamoDBCrudPolicy:
             TableName: !Ref emailsTable
         - Statement:
             - Effect: Allow

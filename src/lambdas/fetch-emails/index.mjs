@@ -48,14 +48,15 @@ export const handler = async (event) => {
             },
         }));
 
-        const emails = result.Items?.map(item => ({
-            emailId: item.emailId?.S,
-            subject: item.subject?.S,
-            sender: item.sender?.S,
-            date: item.date?.S,
-            s3Key: item.s3Key?.S,
-        })) || [];
-
+        const emails = (result.Items || [])
+            .map(item => ({
+                emailId: item.emailId?.S,
+                subject: item.subject?.S,
+                sender: item.sender?.S,
+                date: item.date?.S,
+                s3Key: item.s3Key?.S,
+            }))
+            .filter(email => email.emailId !== "Session");
 
         return {
             statusCode: 200,

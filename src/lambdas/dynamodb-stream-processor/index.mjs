@@ -16,41 +16,48 @@ export const handler = async (event) => {
   for (const record of event.Records) {
     if (record.eventName === 'REMOVE') {
       try {
-        const s3Key = record.dynamodb.OldImage.s3Key.S;
-        const email = record.dynamodb.OldImage.email.S;
+        const oldImage = record.dynamodb.OldImage;
+        const s3Key = oldImage?.s3Key?.S;
+        const email = oldImage?.email?.S;
+        const emailId = oldImage?.emailId?.S;
 
-        const deleteCommand = new DeleteObjectCommand({
-          Bucket: EMAIL_STORAGE_BUCKET,
-          Key: s3Key,
-        });
-
-        await s3.send(deleteCommand);
-
-        const { Rule } = await ses.send(new DescribeReceiptRuleCommand({
-          RuleSetName: SES_RULE_SET_NAME,
-          RuleName: SES_RULE_NAME
-        }));
-
-        if (!Rule) throw new Error("SES rule not found");
-
-        const existingRecipients = Rule.Recipients || [];
-
-        if (existingRecipients.includes(email)) {
-          const updatedRecipients = existingRecipients.filter(r => r !== email);
-
-          const updatedRule = {
-            ...Rule,
-            Recipients: updatedRecipients
-          };
-
-          await ses.send(new UpdateReceiptRuleCommand({
+        if (emailId === "Session") {
+          const { Rule } = await ses.send(new DescribeReceiptRuleCommand({
             RuleSetName: SES_RULE_SET_NAME,
-            Rule: updatedRule
+            RuleName: SES_RULE_NAME
           }));
 
-          console.log(`Removed ${email} from SES recipient rule.`);
+          if (!Rule) throw new Error("SES rule not found");
+
+          const existingRecipients = Rule.Recipients || [];
+
+          if (existingRecipients.includes(email)) {
+            const updatedRecipients = existingRecipients.filter(r => r !== email);
+
+            const updatedRule = {
+              ...Rule,
+              Recipients: updatedRecipients
+            };
+
+            await ses.send(new UpdateReceiptRuleCommand({
+              RuleSetName: SES_RULE_SET_NAME,
+              Rule: updatedRule
+            }));
+
+            console.log(`Removed ${email} from SES recipient rule.`);
+          } else {
+            console.log(`${email} not found in SES recipient list.`);
+          }
         } else {
-          console.log(`${email} not found in SES recipient list.`);
+
+          const deleteCommand = new DeleteObjectCommand({
+            Bucket: EMAIL_STORAGE_BUCKET,
+            Key: s3Key,
+          });
+
+          await s3.send(deleteCommand);
+          
+          console.log(`emailId exists (${emailId}), not removing ${email} from SES rule.`);
         }
 
       } catch (err) {

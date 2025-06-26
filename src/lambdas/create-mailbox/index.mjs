@@ -1,4 +1,4 @@
-import { DynamoDBClient, QueryCommand } from "@aws-sdk/client-dynamodb";
+import { DynamoDBClient, QueryCommand, PutItemCommand } from "@aws-sdk/client-dynamodb";
 import {
     SESClient,
     DescribeReceiptRuleCommand,
@@ -45,11 +45,33 @@ async function addEmailToSesRule(newEmail) {
             RuleSetName: SES_RULE_SET_NAME,
             Rule: updatedRule
         }));
-
-        console.log(`Added ${newEmail} to SES recipient rule.`);
     } catch (err) {
-        console.error("Failed to update SES rule:", err);
-        throw err;
+        return {
+            statusCode: 500,
+            body: JSON.stringify({ error: "Failed to update SES rule" }),
+        };
+    }
+}
+
+async function addEmailToDynamoDB(email) {
+    const ttl = Math.floor(Date.now() / 1000) + 15 * 60;
+    const params = {
+        TableName: TABLE_NAME,
+        Item: {
+            email: { S: email },
+            emailId: { S: "Session" },
+            createdAt: { N: Date.now().toString() },
+            ttl: { N: ttl.toString() }
+        }
+    };
+
+    try {
+        await dynamodb.send(new PutItemCommand(params));
+    } catch (err) {
+        return {
+            statusCode: 500,
+            body: JSON.stringify({ error: "Failed to store email in database" }),
+        };
     }
 }
 
@@ -62,11 +84,8 @@ export const handler = async (event) => {
     }
 
     let email = "";
-    let isUnique = false;
-    const maxAttempts = 10;
-    let attempts = 0;
 
-    while (!isUnique && attempts < maxAttempts) {
+    while (true) {
         const randomString = generateRandomString();
         email = `${randomString}@${EMAIL_DOMAIN}`;
 
@@ -81,9 +100,7 @@ export const handler = async (event) => {
             }));
 
             if (!Items || Items.length === 0) {
-                isUnique = true;
-            } else {
-                attempts++;
+                break;
             }
         } catch (err) {
             console.error("DynamoDB error:", err);
@@ -94,19 +111,22 @@ export const handler = async (event) => {
         }
     }
 
-    if (!isUnique) {
-        return {
-            statusCode: 500,
-            body: JSON.stringify({ error: "Could not generate a unique email" }),
-        };
-    }
 
     try {
         await addEmailToSesRule(email);
     } catch (err) {
         return {
             statusCode: 500,
-            body: JSON.stringify({ error: "Failed to update SES rule" }),
+            body: JSON.stringify({ error: "Failed to update email rule" }),
+        };
+    }
+
+    try {
+        await addEmailToDynamoDB(email);
+    } catch (err) {
+        return {
+            statusCode: 500,
+            body: JSON.stringify({ error: "Failed to store email in database" }),
         };
     }
 
@@ -120,6 +140,6 @@ export const handler = async (event) => {
     return {
         statusCode: 200,
         headers,
-        body: JSON.stringify({ message: "Email session created successfully", email }),
+        body: JSON.stringify({ message: "Email session created successfully" }),
     };
 };
