@@ -66,12 +66,12 @@ export const handler = async () => {
     };
   }
 
-  const token = jwt.sign({ email }, JWT_SECRET, { expiresIn: "20m" });
+  const token = jwt.sign({ email }, JWT_SECRET, { expiresIn: "15m" });
 
   return {
     statusCode: 200,
     headers: {
-      "Set-Cookie": `email_session=${token}; Max-Age=1200; Path=/; SameSite=Lax`,
+      "Set-Cookie": `email_session=${token}; Max-Age=900; Path=/; SameSite=Lax`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ message: "Email session created successfully" }),

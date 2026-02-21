@@ -105,13 +105,18 @@ const Mailbox = () => {
   const fetchEmails = useCallback(async () => {
     try {
       const res = await fetch('/api/fetch-emails', { credentials: 'include' });
+      if (res.status === 401) {
+        document.cookie = 'email_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;';
+        navigate('/');
+        return;
+      }
       if (!res.ok) throw new Error('Failed');
       const data = await res.json();
       setEmails(Array.isArray(data.emails) ? data.emails : []);
     } catch {
       setEmails([]);
     }
-  }, []);
+  }, [navigate]);
 
   useEffect(() => {
     fetchEmails();
