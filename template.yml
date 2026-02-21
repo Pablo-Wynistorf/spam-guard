@@ -111,37 +111,6 @@ Resources:
         InstallCommands:
           - npm install
 
-  DynamoDBStreamProcessorFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      Handler: index.handler
-      CodeUri: src/lambdas/dynamodb-stream-processor/
-      Environment:
-        Variables:
-          EMAIL_STORAGE_BUCKET: !Ref EmailsS3Bucket
-          SES_RULE_SET_NAME: SpamGuardRuleSet
-          SES_RULE_NAME: SpamGuardRule
-      Events:
-        Stream:
-          Type: DynamoDB
-          Properties:
-            Stream: !GetAtt emailsTable.StreamArn
-            StartingPosition: TRIM_HORIZON
-      Policies:
-        - S3CrudPolicy:
-            BucketName: !Ref EmailsS3Bucket
-        - Statement:
-            - Effect: Allow
-              Action:
-                - ses:UpdateReceiptRule
-                - ses:DescribeReceiptRule
-              Resource: "*"
-    Metadata:
-      BuildMethod: nodejs22.x
-      BuildProperties:
-        InstallCommands:
-          - npm install
-
   emailsTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -157,8 +126,6 @@ Resources:
         - AttributeName: emailId
           KeyType: RANGE
       BillingMode: PAY_PER_REQUEST
-      StreamSpecification:
-        StreamViewType: NEW_AND_OLD_IMAGES
       TimeToLiveSpecification:
         AttributeName: ttl
         Enabled: true
@@ -167,6 +134,12 @@ Resources:
     Type: AWS::S3::Bucket
     Properties:
       BucketName: !Sub "spam-guard-emails-bucket-${AWS::AccountId}-${AWS::Region}"
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteEmailsAfter20Minutes
+            Status: Enabled
+            ExpirationInDays: 1
+            Prefix: ""
 
   StaticAssetsS3Bucket:
     Type: AWS::S3::Bucket
@@ -174,6 +147,7 @@ Resources:
       BucketName: !Sub "spam-guard-static-assets-${AWS::AccountId}-${AWS::Region}"
       WebsiteConfiguration:
         IndexDocument: index.html
+        ErrorDocument: index.html
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         IgnorePublicAcls: true

@@ -1,3 +1,4 @@
 */*/*/node_modules/
+src/frontend-app/node_modules/
 .env.json
 /.aws-sam*
