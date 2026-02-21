@@ -37,8 +37,6 @@ Resources:
           EMAIL_DOMAIN: !Ref EmailDomain
           JWT_SECRET: !Ref JwtSecret
           TABLE_NAME: !Ref emailsTable
-          SES_RULE_SET_NAME: SpamGuardRuleSet
-          SES_RULE_NAME: SpamGuardRule
       Events:
         Api:
           Type: Api
@@ -49,12 +47,6 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref emailsTable
-        - Statement:
-            - Effect: Allow
-              Action:
-                - ses:UpdateReceiptRule
-                - ses:DescribeReceiptRule
-              Resource: "*"
     Metadata:
       BuildMethod: nodejs22.x
       BuildProperties:
@@ -267,6 +259,8 @@ Resources:
       Rule:
         Name: SpamGuardRule 
         Enabled: true
+        Recipients:
+          - !Ref EmailDomain
         Actions:
           - SNSAction:
               TopicArn: !Ref SnsTopic

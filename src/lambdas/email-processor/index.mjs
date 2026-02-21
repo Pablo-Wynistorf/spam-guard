@@ -1,5 +1,5 @@
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
-import { DynamoDBClient, PutItemCommand } from "@aws-sdk/client-dynamodb";
+import { DynamoDBClient, PutItemCommand, QueryCommand } from "@aws-sdk/client-dynamodb";
 import { simpleParser } from "mailparser";
 import { v4 as uuidv4 } from "uuid";
 
@@ -19,12 +19,26 @@ export const handler = async (event) => {
     const rawMime = notification.content;
 
     const destinationEmails = mail.destination || [];
+    const recipientEmail = destinationEmails[0];
 
-    if (destinationEmails.includes("recipient@example.com")) {
-      return {
-        statusCode: 200,
-        body: JSON.stringify({ message: "Email to recipient@example.com ignored" })
-      };
+    if (!recipientEmail) {
+      return { statusCode: 200, body: JSON.stringify({ message: "No recipient found" }) };
+    }
+
+    // Check if recipient has an active session in DynamoDB
+    const { Items } = await dynamodb.send(new QueryCommand({
+      TableName: TABLE_NAME,
+      KeyConditionExpression: "email = :email AND emailId = :sid",
+      ExpressionAttributeValues: {
+        ":email": { S: recipientEmail },
+        ":sid": { S: "Session" },
+      },
+      Limit: 1,
+    }));
+
+    if (!Items || Items.length === 0) {
+      console.log(`No active session for ${recipientEmail}, dropping email.`);
+      return { statusCode: 200, body: JSON.stringify({ message: "No active session, email dropped" }) };
     }
 
     const messageId = uuidv4();
@@ -50,7 +64,7 @@ export const handler = async (event) => {
     await dynamodb.send(new PutItemCommand({
       TableName: TABLE_NAME,
       Item: {
-        email:  { S: destinationEmails[0] || "unknown@recipient" },
+        email:  { S: recipientEmail },
         emailId: { S: messageId },
         subject:  { S: parsedEmail.subject || "(No Subject)" },
         sender:   { S: parsedEmail.from?.text || mail.source || "unknown@sender" },
