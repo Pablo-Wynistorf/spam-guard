@@ -238,6 +238,9 @@ Resources:
               QueryString: false
               Cookies:
                 Forward: none
+            MinTTL: 0
+            DefaultTTL: 900
+            MaxTTL: 900
 
         ViewerCertificate:
           CloudFrontDefaultCertificate: true
